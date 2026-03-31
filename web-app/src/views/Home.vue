@@ -152,7 +152,7 @@
 import { h, ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
-import { bookApi } from '../api/book'
+import { novelApi, type NovelDTO } from '../api/novel'
 import StatsSidebar from '@/components/stats/StatsSidebar.vue'
 
 const IconSpark = () =>
@@ -231,12 +231,30 @@ const filteredBooks = computed(() => {
 const fetchBooks = async () => {
   loading.value = true
   try {
-    books.value = await bookApi.getList()
+    const novels = await novelApi.listNovels()
+    // Convert NovelDTO to BookListItem format
+    books.value = novels.map((novel: NovelDTO) => ({
+      slug: novel.id,
+      title: novel.title,
+      stage: novel.stage,
+      stage_label: getStageLabel(novel.stage),
+      genre: '', // Genre not in new API yet
+    }))
   } catch {
     message.error('加载失败')
   } finally {
     loading.value = false
   }
+}
+
+const getStageLabel = (stage: string): string => {
+  const labels: Record<string, string> = {
+    planning: '规划中',
+    writing: '写作中',
+    reviewing: '审稿中',
+    completed: '已完成',
+  }
+  return labels[stage] || stage
 }
 
 const handleCreate = async () => {
@@ -247,20 +265,19 @@ const handleCreate = async () => {
 
   creating.value = true
   try {
-    const payload: any = {
-      title: newBook.value.title || newBook.value.premise.substring(0, 20),
-      premise: newBook.value.premise,
+    const title = newBook.value.title || newBook.value.premise.substring(0, 20)
+    const novelId = `novel-${Date.now()}`
+
+    const payload = {
+      novel_id: novelId,
+      title: title,
+      author: '作者', // Default author
+      target_chapters: showAdvanced.value ? newBook.value.chapters : 10,
     }
 
-    if (showAdvanced.value) {
-      if (newBook.value.genre) payload.genre = newBook.value.genre
-      if (newBook.value.chapters) payload.chapters = newBook.value.chapters
-      if (newBook.value.words) payload.words = newBook.value.words
-    }
-
-    const result = await bookApi.create(payload)
+    const result = await novelApi.createNovel(payload)
     message.success('创建成功')
-    router.push(`/book/${result.slug}/workbench`)
+    router.push(`/book/${result.id}/workbench`)
   } catch (error: any) {
     message.error(error.response?.data?.detail || '创建失败')
   } finally {
@@ -275,7 +292,7 @@ const navigateToBook = (slug: string) => {
 const handleDeleteBook = async (slug: string) => {
   deletingSlug.value = slug
   try {
-    await bookApi.deleteBook(slug)
+    await novelApi.deleteNovel(slug)
     message.success('书目已删除')
     books.value = books.value.filter(b => b.slug !== slug)
   } catch (error: any) {
