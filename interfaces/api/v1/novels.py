@@ -1,11 +1,12 @@
 """Novel API 路由"""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from typing import List
 from pydantic import BaseModel, Field
 
 from application.services.novel_service import NovelService
+from application.services.auto_bible_generator import AutoBibleGenerator
 from application.dtos.novel_dto import NovelDTO
-from interfaces.api.dependencies import get_novel_service
+from interfaces.api.dependencies import get_novel_service, get_auto_bible_generator
 from domain.shared.exceptions import EntityNotFoundError
 
 
@@ -30,23 +31,38 @@ class UpdateStageRequest(BaseModel):
 @router.post("/", response_model=NovelDTO, status_code=201)
 async def create_novel(
     request: CreateNovelRequest,
-    service: NovelService = Depends(get_novel_service)
+    background_tasks: BackgroundTasks,
+    service: NovelService = Depends(get_novel_service),
+    bible_generator: AutoBibleGenerator = Depends(get_auto_bible_generator)
 ):
     """创建新小说
 
     Args:
         request: 创建小说请求
+        background_tasks: 后台任务
         service: Novel 服务
+        bible_generator: Bible 生成器
 
     Returns:
         创建的小说 DTO
     """
-    return service.create_novel(
+    # 创建小说实体
+    novel_dto = service.create_novel(
         novel_id=request.novel_id,
         title=request.title,
         author=request.author,
         target_chapters=request.target_chapters
     )
+
+    # 后台自动生成 Bible
+    background_tasks.add_task(
+        bible_generator.generate_and_save,
+        request.novel_id,
+        request.title,
+        request.target_chapters
+    )
+
+    return novel_dto
 
 
 @router.get("/{novel_id}", response_model=NovelDTO)

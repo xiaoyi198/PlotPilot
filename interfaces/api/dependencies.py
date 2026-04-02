@@ -29,6 +29,7 @@ from application.services.ai_generation_service import AIGenerationService
 from application.services.knowledge_service import KnowledgeService
 from application.services.chat_service import ChatService
 from application.services.context_builder import ContextBuilder
+from application.services.auto_bible_generator import AutoBibleGenerator
 from application.workflows.auto_novel_generation_workflow import AutoNovelGenerationWorkflow
 from application.services.hosted_write_service import HostedWriteService
 from domain.novel.services.consistency_checker import ConsistencyChecker
@@ -329,4 +330,19 @@ def get_auto_workflow() -> AutoNovelGenerationWorkflow:
         storyline_manager=get_storyline_manager(),
         plot_arc_repository=get_plot_arc_repository(),
         llm_service=llm_service
+    )
+
+
+def get_auto_bible_generator() -> AutoBibleGenerator:
+    """获取自动 Bible 生成器
+
+    Returns:
+        AutoBibleGenerator 实例
+    """
+    settings = _anthropic_settings(require_key=True)
+    llm_service = AnthropicProvider(settings)
+
+    return AutoBibleGenerator(
+        llm_service=llm_service,
+        bible_service=get_bible_service()
     )
