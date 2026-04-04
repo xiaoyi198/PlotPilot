@@ -315,9 +315,19 @@ def get_auto_bible_generator() -> AutoBibleGenerator:
     settings = _anthropic_settings(require_key=True)
     llm_service = AnthropicProvider(settings)
 
+    # 导入 WorldbuildingService
+    from application.services.worldbuilding_service import WorldbuildingService
+    from infrastructure.persistence.database.worldbuilding_repository import WorldbuildingRepository
+    from application.paths import get_db_path
+
+    db_path = get_db_path()
+    worldbuilding_repo = WorldbuildingRepository(db_path)
+    worldbuilding_service = WorldbuildingService(worldbuilding_repo)
+
     return AutoBibleGenerator(
         llm_service=llm_service,
-        bible_service=get_bible_service()
+        bible_service=get_bible_service(),
+        worldbuilding_service=worldbuilding_service
     )
 
 

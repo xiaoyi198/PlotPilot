@@ -1,7 +1,11 @@
 <template>
   <div class="right-panel">
     <n-tabs v-model:value="activeTab" type="line" size="medium" animated class="settings-tabs">
-      <n-tab-pane name="bible" tab="世界观">
+      <n-tab-pane name="worldbuilding" tab="世界观">
+        <WorldbuildingPanel :slug="slug" />
+      </n-tab-pane>
+
+      <n-tab-pane name="bible" tab="作品设定">
         <BiblePanel :key="bibleKey" :slug="slug" />
       </n-tab-pane>
 
@@ -15,6 +19,10 @@
 
       <n-tab-pane name="plot-arc" tab="情节弧线">
         <PlotArcPanel :slug="slug" />
+      </n-tab-pane>
+
+      <n-tab-pane name="timeline" tab="时间线">
+        <TimelinePanel :slug="slug" />
       </n-tab-pane>
     </n-tabs>
 
@@ -52,8 +60,10 @@
 import { ref, watch } from 'vue'
 import BiblePanel from '../BiblePanel.vue'
 import KnowledgePanel from '../KnowledgePanel.vue'
+import WorldbuildingPanel from './WorldbuildingPanel.vue'
 import StorylinePanel from './StorylinePanel.vue'
 import PlotArcPanel from './PlotArcPanel.vue'
+import TimelinePanel from './TimelinePanel.vue'
 
 interface Chapter {
   id: number

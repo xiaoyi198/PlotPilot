@@ -1,0 +1,15 @@
+{
+  "id": "test-wb-1775282796-bible",
+  "novel_id": "test-wb-1775282796",
+  "characters": [],
+  "world_settings": [],
+  "locations": [],
+  "timeline_notes": [],
+  "style_notes": [
+    {
+      "id": "test-wb-1775282796-style-1",
+      "category": "文风公约",
+      "content": "第三人称有限视角,以主角视角为主。基调神秘而富有冒险感,节奏前期稳健铺垫,中后期紧凑刺激。避免过度说教和冗长环境描写。营造魔法与现实交织的奇幻氛围,注重感官细节和情感张力。"
+    }
+  ]
+}

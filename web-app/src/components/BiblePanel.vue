@@ -7,34 +7,30 @@
           <n-tag size="small" round :bordered="false" class="bible-badge">Story Bible</n-tag>
         </div>
         <p class="bible-lead">
-          全书<strong>世界观与写作公约</strong>的权威快照：会进入结构规划、章纲与对话上下文。与「梗概」「编务叙事」「人物关系网」分工如下，避免混写。
+          全书<strong>写作公约与风格指南</strong>：人称、时态、叙事距离、基调与禁区——全书的「怎么写」。
         </p>
         <div class="bible-roles" aria-label="资料分工">
           <div class="bible-role-item">
-            <span class="bible-role-k">梗概 / 主线</span>
-            <span class="bible-role-v">manifest · 立项时定调</span>
+            <span class="bible-role-k">世界观构建</span>
+            <span class="bible-role-v">世界观 Tab · 5维度框架</span>
           </div>
           <div class="bible-role-item bible-role-here">
-            <span class="bible-role-k">本书设定</span>
-            <span class="bible-role-v">此处 · 文风、时间线</span>
+            <span class="bible-role-k">写作风格</span>
+            <span class="bible-role-v">此处 · 文风公约</span>
           </div>
           <div class="bible-role-item">
-            <span class="bible-role-k">章级编务</span>
-            <span class="bible-role-v">叙事侧栏 · 节拍与摘要</span>
+            <span class="bible-role-k">角色与地点</span>
+            <span class="bible-role-v">知识库 · 三元组关系</span>
           </div>
           <div class="bible-role-item">
-            <span class="bible-role-k">人物与地点</span>
-            <span class="bible-role-v">叙事与知识 · 三元组关系图</span>
+            <span class="bible-role-k">叙事线索</span>
+            <span class="bible-role-v">故事线/情节弧/时间线</span>
           </div>
         </div>
         <div class="bible-stats" aria-live="polite">
-          <span class="bible-stat"><em>{{ stats.timelineItems }}</em> 时间线</span>
-          <span class="bible-stat-dot" />
           <span class="bible-stat bible-stat-style" :class="{ 'is-done': stats.styleOk }">
             文风公约 {{ stats.styleOk ? '已填' : '待补充' }}
           </span>
-          <span class="bible-stat-dot" />
-          <span class="bible-stat-hint">人物与地点请至「叙事与知识」维护</span>
         </div>
       </div>
       <n-space class="bible-hero-actions" :size="8" align="center">
@@ -45,72 +41,37 @@
       </n-space>
     </header>
 
-    <n-tabs v-model:value="mainTab" type="line" size="medium" animated class="bible-tabs">
-      <!-- 文风设定 Tab -->
-      <n-tab-pane name="style" tab="文风设定">
-        <n-scrollbar class="bible-scroll">
-          <div class="bible-form">
-            <n-card size="small" class="bible-card" :bordered="false" :segmented="{ content: true, footer: false }">
-              <template #header>
-                <div class="bcard-head">
-                  <span class="bcard-icon bcard-icon-text" aria-hidden="true">文</span>
-                  <div>
-                    <div class="bcard-title">叙事与风格公约</div>
-                    <div class="bcard-desc">人称、时态、叙事距离、基调与禁区——全书的「怎么写」。</div>
-                  </div>
-                </div>
-              </template>
-              <n-input
-                v-model:value="state.style_notes"
-                type="textarea"
-                :autosize="{ minRows: 5, maxRows: 22 }"
-                placeholder="建议写明：第三人称有限 / 全知；冷幽默或克制；是否允许破墙、血腥、感情线尺度；参考气质（勿抄原文）…"
-                show-count
-                :maxlength="12000"
-                class="bible-textarea"
-              />
-            </n-card>
-          </div>
-        </n-scrollbar>
-        <div class="bible-footer">
-          <n-space :size="8">
-            <n-button size="small" type="primary" :loading="saving" @click="save">保存</n-button>
-            <n-button size="small" @click="openJsonModal">JSON 编辑器</n-button>
-          </n-space>
-        </div>
-      </n-tab-pane>
-
-      <!-- 时间线 Tab -->
-      <n-tab-pane name="timeline" tab="时间线">
-        <n-scrollbar class="bible-scroll">
-          <div class="bible-form">
-            <n-card size="small" class="bible-card bible-card-last" :bordered="false" :segmented="{ content: true, footer: false }">
+    <n-scrollbar class="bible-scroll">
+      <div class="bible-form">
+        <n-card size="small" class="bible-card" :bordered="false" :segmented="{ content: true, footer: false }">
           <template #header>
             <div class="bcard-head">
-              <span class="bible-icon-timeline" aria-hidden="true" />
+              <span class="bcard-icon bcard-icon-text" aria-hidden="true">文</span>
               <div>
-                <div class="bcard-title">故事时间轴要点</div>
-                <div class="bcard-desc">一条一事，帮助对齐因果与伏笔；不必写细纲级流水账。</div>
+                <div class="bcard-title">叙事与风格公约</div>
+                <div class="bcard-desc">人称、时态、叙事距离、基调与禁区——全书的「怎么写」。</div>
               </div>
             </div>
           </template>
-          <n-dynamic-input
-            v-model:value="state.timeline_notes"
-            :min="0"
-            :on-create="() => ''"
-            placeholder="例：第三年冬 · 盟约订立；事件前先可空，随写随补"
+          <n-input
+            v-model:value="state.style_notes"
+            type="textarea"
+            :autosize="{ minRows: 5, maxRows: 22 }"
+            placeholder="建议写明：第三人称有限 / 全知；冷幽默或克制；是否允许破墙、血腥、感情线尺度；参考气质（勿抄原文）…"
+            show-count
+            :maxlength="12000"
+            class="bible-textarea"
           />
         </n-card>
-          </div>
-        </n-scrollbar>
-        <div class="bible-footer">
-          <n-space :size="8">
-            <n-button size="small" type="primary" :loading="saving" @click="save">保存</n-button>
-            <n-button size="small" @click="openJsonModal">JSON 编辑器</n-button>
-          </n-space>
-        </div>
-      </n-tab-pane>
-    </n-tabs>
+      </div>
+    </n-scrollbar>
+
+    <div class="bible-footer">
+      <n-space :size="8">
+        <n-button size="small" type="primary" :loading="saving" @click="save">保存</n-button>
+        <n-button size="small" @click="openJsonModal">JSON 编辑器</n-button>
+      </n-space>
+    </div>
 
     <!-- JSON 编辑器弹窗 -->
     <n-modal v-model:show="showJsonModal" preset="card" title="JSON 编辑器" style="width: 800px; max-width: 90vw">
@@ -156,21 +117,18 @@ interface BibleLocation {
 const emptyState = () => ({
   characters: [] as BibleCharacter[],
   locations: [] as BibleLocation[],
-  timeline_notes: [] as string[],
   style_notes: '',
 })
 
 const state = ref(emptyState())
 const jsonRaw = ref('')
-const mainTab = ref<'style' | 'timeline'>('style')
 const showJsonModal = ref(false)
 const saving = ref(false)
 const generating = ref(false)
 
 const stats = computed(() => {
-  const timelineItems = state.value.timeline_notes.map(s => String(s || '').trim()).filter(Boolean).length
   const styleOk = (state.value.style_notes || '').trim().length >= 20
-  return { timelineItems, styleOk }
+  return { styleOk }
 })
 
 const syncJsonFromState = () => {
@@ -178,7 +136,6 @@ const syncJsonFromState = () => {
     {
       characters: state.value.characters,
       locations: state.value.locations,
-      timeline_notes: state.value.timeline_notes,
       style_notes: state.value.style_notes,
     },
     null,
@@ -208,9 +165,6 @@ const fromApiFormat = (bible: any) => {
           description: l.description || '',
         }))
       : [],
-    timeline_notes: Array.isArray(bible.timeline_notes)
-      ? bible.timeline_notes.map((n: TimelineNoteDTO) => `${n.time_point} · ${n.event}`)
-      : [],
     style_notes: Array.isArray(bible.style_notes) && bible.style_notes.length > 0
       ? bible.style_notes.map((n: StyleNoteDTO) => n.content).join('\n\n')
       : '',
@@ -233,18 +187,6 @@ const toApiFormat = (data: any) => {
     location_type: 'general',
   }))
 
-  const timeline_notes: TimelineNoteDTO[] = data.timeline_notes
-    .map((note: string, i: number) => {
-      const parts = String(note || '').split('·').map(s => s.trim())
-      return {
-        id: `timeline-${i + 1}`,
-        event: parts.length > 1 ? parts[1] : parts[0] || '',
-        time_point: parts.length > 1 ? parts[0] : '',
-        description: '',
-      }
-    })
-    .filter((n: TimelineNoteDTO) => n.event)
-
   const style_notes: StyleNoteDTO[] = data.style_notes
     ? [
         {
@@ -255,7 +197,7 @@ const toApiFormat = (data: any) => {
       ]
     : []
 
-  return { characters, world_settings: [], locations, timeline_notes, style_notes }
+  return { characters, world_settings: [], locations, timeline_notes: [], style_notes }
 }
 
 const load = async () => {
@@ -285,7 +227,6 @@ const save = async () => {
     const payload = {
       characters: state.value.characters.filter(c => (c.name || '').trim()),
       locations: state.value.locations.filter(l => (l.name || '').trim()),
-      timeline_notes: state.value.timeline_notes.map(s => String(s || '').trim()).filter(Boolean),
       style_notes: state.value.style_notes,
     }
     const apiData = toApiFormat(payload)
@@ -506,34 +447,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-.bible-tabs {
-  flex: 1;
-  min-height: 0;
-  padding-left: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.bible-tabs :deep(.n-tabs-nav) {
-  padding-bottom: 0;
-  margin-bottom: 0;
-  padding-left: 16px;
-  padding-right: 16px;
-}
-
-.bible-tabs :deep(.n-tabs-pane-wrapper) {
-  flex: 1;
-  min-height: 0;
-  padding-top: 0;
-}
-
-.bible-tabs :deep(.n-tab-pane) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding-top: 0;
 }
 
 .bible-scroll {

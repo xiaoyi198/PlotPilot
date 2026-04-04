@@ -24,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from interfaces.api.v1 import novels, chapters, bible, cast, knowledge, generation, story_structure
 from interfaces.api.v1 import chapter_element_routes, knowledge_graph_routes, continuous_planning_routes
+from interfaces.api.v1 import worldbuilding_routes
 from web.routers.stats import create_stats_router
 from web.services.stats_service import StatsService
 from web.repositories.stats_repository_adapter import StatsRepositoryAdapter
@@ -67,6 +68,7 @@ app.include_router(story_structure.router, prefix="/api/v1")
 app.include_router(continuous_planning_routes.router)
 app.include_router(chapter_element_routes.router)
 app.include_router(knowledge_graph_routes.router)
+app.include_router(worldbuilding_routes.router)
 
 # 注册统计路由（使用适配器连接新架构）
 stats_repository = StatsRepositoryAdapter(DATA_DIR)

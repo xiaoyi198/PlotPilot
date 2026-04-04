@@ -118,16 +118,24 @@ class BulkUpdateBibleRequest(BaseModel):
 async def generate_bible(
     novel_id: str,
     background_tasks: BackgroundTasks,
+    stage: str = "all",  # all / worldbuilding / characters / locations
     bible_generator: AutoBibleGenerator = Depends(get_auto_bible_generator),
     knowledge_generator: AutoKnowledgeGenerator = Depends(get_auto_knowledge_generator)
 ):
     """手动触发 Bible 和 Knowledge 生成（异步）
+
+    支持分阶段生成：
+    - stage=all: 一次性生成所有内容（默认，向后兼容）
+    - stage=worldbuilding: 只生成世界观（5维度）和文风公约
+    - stage=characters: 基于已有世界观生成人物
+    - stage=locations: 基于已有世界观和人物生成地点
 
     用户创建小说后，前端调用此接口开始生成 Bible。
     生成过程在后台进行，前端应轮询 /bible/novels/{novel_id}/bible/status 检查状态。
 
     Args:
         novel_id: 小说 ID
+        stage: 生成阶段
         background_tasks: FastAPI 后台任务
         bible_generator: Bible 生成器
         knowledge_generator: Knowledge 生成器
@@ -136,6 +144,7 @@ async def generate_bible(
         202 Accepted，表示生成任务已启动
     """
     async def _generate_task():
+        logger.info(f"Starting Bible generation task for {novel_id}, stage={stage}")
         try:
             # 获取小说信息（需要 premise 和 target_chapters）
             from interfaces.api.dependencies import get_novel_service
@@ -148,11 +157,12 @@ async def generate_bible(
             # 使用 premise（故事梗概）生成 Bible，如果没有则使用 title
             premise = novel.premise if novel.premise else novel.title
 
-            # 生成 Bible
+            # 生成 Bible（支持分阶段）
             bible_data = await bible_generator.generate_and_save(
                 novel_id,
                 premise,
-                novel.target_chapters
+                novel.target_chapters,
+                stage=stage
             )
 
             # 构建 Bible 摘要供 Knowledge 生成使用
