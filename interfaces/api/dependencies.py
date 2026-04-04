@@ -14,14 +14,12 @@ from infrastructure.persistence.database.connection import get_database
 from infrastructure.persistence.database.sqlite_novel_repository import SqliteNovelRepository
 from infrastructure.persistence.database.sqlite_chapter_repository import SqliteChapterRepository
 from infrastructure.persistence.database.sqlite_knowledge_repository import SqliteKnowledgeRepository
+from infrastructure.persistence.database.sqlite_bible_repository import SqliteBibleRepository
+from infrastructure.persistence.database.sqlite_storyline_repository import SqliteStorylineRepository
+from infrastructure.persistence.database.sqlite_plot_arc_repository import SqlitePlotArcRepository
 from infrastructure.persistence.database.story_node_repository import StoryNodeRepository
-from infrastructure.persistence.repositories.file_novel_repository import FileNovelRepository
-from infrastructure.persistence.repositories.file_chapter_repository import FileChapterRepository
-from infrastructure.persistence.repositories.file_bible_repository import FileBibleRepository
 from infrastructure.persistence.repositories.file_cast_repository import FileCastRepository
 from infrastructure.persistence.repositories.file_knowledge_repository import FileKnowledgeRepository
-from infrastructure.persistence.repositories.file_storyline_repository import FileStorylineRepository
-from infrastructure.persistence.repositories.file_plot_arc_repository import FilePlotArcRepository
 from infrastructure.persistence.repositories.file_foreshadowing_repository import FileForeshadowingRepository
 from infrastructure.ai.providers.anthropic_provider import AnthropicProvider
 from infrastructure.ai.config.settings import Settings
@@ -36,6 +34,7 @@ from application.services.auto_bible_generator import AutoBibleGenerator
 from application.services.auto_knowledge_generator import AutoKnowledgeGenerator
 from application.services.state_extractor import StateExtractor
 from application.services.state_updater import StateUpdater
+from application.services.macro_planning_service import MacroPlanningService
 from application.workflows.auto_novel_generation_workflow import AutoNovelGenerationWorkflow
 from application.services.hosted_write_service import HostedWriteService
 from domain.novel.services.consistency_checker import ConsistencyChecker
@@ -107,13 +106,9 @@ def get_chapter_repository() -> SqliteChapterRepository:
     return SqliteChapterRepository(get_database())
 
 
-def get_bible_repository() -> FileBibleRepository:
-    """获取 Bible 仓储
-
-    Returns:
-        FileBibleRepository 实例
-    """
-    return FileBibleRepository(get_storage())
+def get_bible_repository() -> SqliteBibleRepository:
+    """获取 Bible 仓储（SQLite 唯一数据源）。"""
+    return SqliteBibleRepository(get_database())
 
 
 def get_cast_repository() -> FileCastRepository:
@@ -134,22 +129,14 @@ def get_knowledge_repository() -> SqliteKnowledgeRepository:
     return SqliteKnowledgeRepository(get_database())
 
 
-def get_storyline_repository() -> FileStorylineRepository:
-    """获取 Storyline 仓储
-
-    Returns:
-        FileStorylineRepository 实例
-    """
-    return FileStorylineRepository(get_storage())
+def get_storyline_repository() -> SqliteStorylineRepository:
+    """获取 Storyline 仓储（SQLite）。"""
+    return SqliteStorylineRepository(get_database())
 
 
-def get_plot_arc_repository() -> FilePlotArcRepository:
-    """获取 PlotArc 仓储
-
-    Returns:
-        FilePlotArcRepository 实例
-    """
-    return FilePlotArcRepository(get_storage())
+def get_plot_arc_repository() -> SqlitePlotArcRepository:
+    """获取 PlotArc 仓储（SQLite）。"""
+    return SqlitePlotArcRepository(get_database())
 
 
 def get_foreshadowing_repository():
@@ -284,7 +271,8 @@ def get_context_builder() -> ContextBuilder:
         relationship_engine=get_relationship_engine(),
         vector_store=get_vector_store(),
         novel_repository=get_novel_repository(),
-        chapter_repository=get_chapter_repository()
+        chapter_repository=get_chapter_repository(),
+        plot_arc_repository=get_plot_arc_repository(),
     )
 
 
@@ -394,4 +382,27 @@ def get_state_updater() -> StateUpdater:
         bible_repository=get_bible_repository(),
         foreshadowing_repository=get_foreshadowing_repository(),
         knowledge_service=get_knowledge_service()
+    )
+
+
+def get_macro_planning_service() -> MacroPlanningService:
+    """获取宏观规划服务
+
+    Returns:
+        MacroPlanningService 实例
+    """
+    from infrastructure.ai.llm_client import LLMClient
+
+    settings = _anthropic_settings(require_key=False)
+    if settings:
+        llm_provider = AnthropicProvider(settings)
+    else:
+        from infrastructure.ai.providers.mock_provider import MockProvider
+        llm_provider = MockProvider()
+
+    llm_client = LLMClient(provider=llm_provider)
+
+    return MacroPlanningService(
+        story_node_repo=get_story_node_repository(),
+        llm_client=llm_client
     )

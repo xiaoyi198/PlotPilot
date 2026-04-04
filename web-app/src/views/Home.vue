@@ -165,6 +165,7 @@ import { useMessage } from 'naive-ui'
 import { novelApi, type NovelDTO } from '../api/novel'
 import StatsSidebar from '@/components/stats/StatsSidebar.vue'
 import NovelSetupGuide from '@/components/onboarding/NovelSetupGuide.vue'
+import { useStatsStore } from '@/stores/statsStore'
 
 const IconSpark = () =>
   h(
@@ -198,6 +199,7 @@ const IconTrash = () =>
 
 const router = useRouter()
 const message = useMessage()
+const statsStore = useStatsStore()
 
 const showAdvanced = ref(false)
 const creating = ref(false)
@@ -320,6 +322,8 @@ const handleDeleteBook = async (slug: string) => {
     await novelApi.deleteNovel(slug)
     message.success('书目已删除')
     books.value = books.value.filter(b => b.slug !== slug)
+    // 立即刷新统计数据
+    await statsStore.loadGlobalStats(true)
   } catch (error: any) {
     const detail = error?.response?.data?.detail
     message.error(typeof detail === 'string' ? detail : '删除失败')

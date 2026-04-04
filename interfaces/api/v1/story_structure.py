@@ -44,14 +44,10 @@ def get_ai_service() -> StoryStructureAIService:
             # 如果初始化失败，服务将降级使用默认规则
             pass
 
-    # 获取 Bible 服务
-    from infrastructure.persistence.repositories.file_bible_repository import FileBibleRepository
-    from infrastructure.persistence.storage.file_storage import FileStorage
     from application.services.bible_service import BibleService
+    from interfaces.api.dependencies import get_bible_repository
 
-    storage = FileStorage(DATA_DIR)
-    bible_repository = FileBibleRepository(storage)
-    bible_service = BibleService(bible_repository)
+    bible_service = BibleService(get_bible_repository())
 
     return StoryStructureAIService(repository, llm_service, bible_service)
 
