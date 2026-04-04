@@ -8,6 +8,8 @@ from domain.novel.repositories.chapter_repository import ChapterRepository
 from domain.novel.repositories.plot_arc_repository import PlotArcRepository
 from domain.novel.value_objects.novel_id import NovelId
 from domain.ai.services.vector_store import VectorStore
+from domain.ai.services.embedding_service import EmbeddingService
+from application.ai.vector_retrieval_facade import VectorRetrievalFacade
 
 if TYPE_CHECKING:
     from application.dtos.scene_director_dto import SceneDirectorAnalysis
@@ -61,6 +63,7 @@ class ContextBuilder:
         novel_repository: NovelRepository,
         chapter_repository: ChapterRepository,
         plot_arc_repository: Optional[PlotArcRepository] = None,
+        embedding_service: Optional[EmbeddingService] = None,
     ):
         self.bible_service = bible_service
         self.storyline_manager = storyline_manager
@@ -69,6 +72,12 @@ class ContextBuilder:
         self.novel_repository = novel_repository
         self.chapter_repository = chapter_repository
         self.plot_arc_repository = plot_arc_repository
+        self.embedding_service = embedding_service
+
+        # 创建向量检索门面（如果两个服务都可用）
+        self.vector_facade = None
+        if vector_store and embedding_service:
+            self.vector_facade = VectorRetrievalFacade(vector_store, embedding_service)
 
     def build_context(
         self,
@@ -402,6 +411,41 @@ class ContextBuilder:
 
                     parts.append(style_info)
                     running_tokens += style_tokens
+
+        # 向量检索：相关章节片段（Top-5，±10 章窗口过滤）
+        if self.vector_facade:
+            try:
+                collection_name = f"novel_{novel_id}_chunks"
+                vector_results = self.vector_facade.sync_search(
+                    collection=collection_name,
+                    query_text=outline,
+                    limit=5,
+                )
+
+                # 过滤：±10 章窗口
+                filtered_results = [
+                    hit for hit in vector_results
+                    if abs(hit["payload"]["chapter_number"] - chapter_number) <= 10
+                ]
+
+                if filtered_results:
+                    parts.append("\nRelevant Context (from previous chapters):")
+                    running_tokens = self.estimate_tokens("\n".join(parts))
+
+                    for hit in filtered_results:
+                        text = hit["payload"]["text"]
+                        vector_info = f"- {text}"
+                        vector_tokens = self.estimate_tokens(vector_info)
+
+                        # 检查预算
+                        if running_tokens + vector_tokens > budget:
+                            break
+
+                        parts.append(vector_info)
+                        running_tokens += vector_tokens
+
+            except Exception as e:
+                logger.warning(f"Vector retrieval failed: {e}")
 
         context = "\n".join(parts)
 
