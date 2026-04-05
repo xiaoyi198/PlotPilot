@@ -44,6 +44,7 @@
 
     <footer class="sidebar-footer">
       <span class="update-time">{{ updateTimeText }}</span>
+      <a href="/architecture.html" target="_blank" class="architecture-link">架构文档</a>
     </footer>
   </aside>
 </template>
@@ -213,10 +214,24 @@ const updateTimeText = computed(() => formatTime(lastUpdateTime.value))
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .update-time {
   font-size: 12px;
   color: #9ca3af;
+}
+
+.architecture-link {
+  font-size: 12px;
+  color: #9ca3af;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.architecture-link:hover {
+  color: #6b7280;
 }
 </style>

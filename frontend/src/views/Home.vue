@@ -143,12 +143,6 @@
           </n-gi>
         </n-grid>
       </section>
-
-      <footer class="home-footer">
-        <a href="/architecture.html" target="_blank" class="architecture-link">
-          架构文档
-        </a>
-      </footer>
     </div>
     </div>
 
@@ -547,23 +541,5 @@ onMounted(() => {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.home-footer {
-  margin-top: 32px;
-  padding: 20px 0;
-  text-align: center;
-  animation: fade-up 0.55s ease 0.2s both;
-}
-
-.architecture-link {
-  color: #94a3b8;
-  text-decoration: none;
-  font-size: 13px;
-  transition: color 0.2s ease;
-}
-
-.architecture-link:hover {
-  color: #64748b;
 }
 </style>
