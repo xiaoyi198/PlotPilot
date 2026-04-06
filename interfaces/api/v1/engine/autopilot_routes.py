@@ -176,8 +176,17 @@ async def autopilot_log_stream(novel_id: str):
     novel_repo = get_novel_repository()
 
     async def event_generator():
+        # 发送初始连接事件
+        init_event = {
+            "type": "connected",
+            "message": "日志流已连接",
+            "timestamp": datetime.now().isoformat()
+        }
+        yield f"data: {json.dumps(init_event, ensure_ascii=False)}\n\n"
+
         last_stage = None
         last_beat = None
+        heartbeat_counter = 0
 
         while True:
             try:
@@ -255,6 +264,17 @@ async def autopilot_log_stream(novel_id: str):
                     }
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                     break
+
+                # 每 10 次循环（20秒）发送一次心跳
+                heartbeat_counter += 1
+                if heartbeat_counter >= 10:
+                    heartbeat_event = {
+                        "type": "heartbeat",
+                        "message": "keepalive",
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    yield f"data: {json.dumps(heartbeat_event, ensure_ascii=False)}\n\n"
+                    heartbeat_counter = 0
 
                 await asyncio.sleep(2)  # 每2秒检查一次
 

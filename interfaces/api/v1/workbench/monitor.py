@@ -58,9 +58,9 @@ async def get_tension_curve(novel_id: str):
             # 从章节元数据中获取张力值
             tension = getattr(ch, 'tension_score', None) or 50.0
             points.append(TensionPoint(
-                chapter=ch.chapter_number,
+                chapter=ch.number,
                 tension=float(tension),
-                title=ch.title or f"第{ch.chapter_number}章"
+                title=ch.title or f"第{ch.number}章"
             ))
 
         # 按章节号排序
@@ -158,7 +158,7 @@ async def get_foreshadow_stats(novel_id: str):
 
         # 获取当前最新章节号
         chapters = chapter_repo.list_by_novel(NovelId(novel_id))
-        current_chapter = max((ch.chapter_number for ch in chapters), default=0)
+        current_chapter = max((ch.number for ch in chapters), default=0)
 
         # 计算遗忘风险：超过10章未回收的伏笔
         forgotten_risk = 0

@@ -324,6 +324,8 @@ class StoryNodeRepository:
             # 3. 批量插入
             if creates:
                 for c in creates:
+                    # 调试日志
+                    print(f"[DEBUG] Inserting node: id={c['id']}, planning_status={c.get('planning_status', 'ai_generated')!r}, planning_source={c.get('planning_source', 'ai_macro')!r}")
                     cursor.execute("""
                         INSERT INTO story_nodes (
                             id, novel_id, parent_id, node_type, number, title, description, order_index,
@@ -343,8 +345,8 @@ class StoryNodeRepository:
                         c['title'],
                         c.get('description', ''),
                         c['order_index'],
-                        c.get('planning_status', 'PENDING'),
-                        c.get('planning_source', 'AI'),
+                        c.get('planning_status', 'ai_generated'),
+                        c.get('planning_source', 'ai_macro'),
                         c.get('chapter_start'),
                         c.get('chapter_end'),
                         c.get('chapter_count'),

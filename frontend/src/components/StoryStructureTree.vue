@@ -7,6 +7,7 @@
         :render-label="renderLabel"
         :render-suffix="renderSuffix"
         :selected-keys="selectedKeys"
+        :default-expanded-keys="expandedKeys"
         block-line
         expand-on-click
         selectable
@@ -89,6 +90,7 @@ const message = useMessage()
 const loading = ref(false)
 const treeData = ref<StoryNode[]>([])
 const selectedKeys = ref<string[]>([])
+const expandedKeys = ref<string[]>([])
 
 // 右键菜单状态
 const menuVisible = ref(false)
@@ -184,12 +186,28 @@ const convertToTreeNode = (node: StoryNode): any => {
   }
 }
 
+/** 收集所有非章节节点的 key，用于自动展开 */
+const collectNonChapterKeys = (nodes: StoryNode[]): string[] => {
+  const keys: string[] = []
+  const traverse = (node: StoryNode) => {
+    if (node.node_type !== 'chapter') {
+      keys.push(node.id)
+    }
+    node.children?.forEach(traverse)
+  }
+  nodes.forEach(traverse)
+  return keys
+}
+
 const loadTree = async () => {
   loading.value = true
   try {
     const res = await structureApi.getTree(props.slug)
     const nodes = res.tree?.nodes || []
     treeData.value = nodes.length > 0 ? nodes.map(convertToTreeNode) : []
+
+    // 自动展开所有非章节节点
+    expandedKeys.value = collectNonChapterKeys(treeData.value)
 
     // 通知父组件树是否有数据
     emit('treeLoaded', treeData.value.length > 0)

@@ -193,6 +193,7 @@ class AutopilotDaemon:
                 )
 
         # ⏸ 幕级章节大纲就绪，再次进入人工审阅点
+        novel.current_act = target_act_number
         novel.current_stage = NovelStage.PAUSED_FOR_REVIEW
         logger.info(f"[{novel.novel_id}] 第 {target_act_number} 幕规划完成，进入审阅等待")
 
