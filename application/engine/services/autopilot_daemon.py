@@ -45,6 +45,8 @@ class AutopilotDaemon:
         circuit_breaker=None,
         chapter_workflow: Optional[AutoNovelGenerationWorkflow] = None,
         aftermath_pipeline: Optional[ChapterAftermathPipeline] = None,
+        volume_summary_service=None,
+        foreshadowing_repository=None,
     ):
         self.novel_repository = novel_repository
         self.llm_service = llm_service
@@ -58,6 +60,18 @@ class AutopilotDaemon:
         self.circuit_breaker = circuit_breaker
         self.chapter_workflow = chapter_workflow
         self.aftermath_pipeline = aftermath_pipeline
+        self.volume_summary_service = volume_summary_service
+        self.foreshadowing_repository = foreshadowing_repository
+        
+        # 惰性初始化 VolumeSummaryService
+        if not self.volume_summary_service and llm_service and story_node_repo:
+            from application.blueprint.services.volume_summary_service import VolumeSummaryService
+            self.volume_summary_service = VolumeSummaryService(
+                llm_service=llm_service,
+                story_node_repository=story_node_repo,
+                chapter_repository=chapter_repository,
+                foreshadowing_repository=foreshadowing_repository,
+            )
 
     def run_forever(self):
         """守护进程主循环（事务最小化原则）"""
@@ -66,6 +80,7 @@ class AutopilotDaemon:
         logger.info(f"   Poll Interval: {self.poll_interval}s")
         logger.info(f"   Circuit Breaker: {'Enabled' if self.circuit_breaker else 'Disabled'}")
         logger.info(f"   Voice Drift Service: {'Enabled' if self.voice_drift_service else 'Disabled'}")
+        logger.info(f"   Volume Summary Service: {'Enabled' if self.volume_summary_service else 'Disabled'}")
         logger.info("=" * 80)
 
         loop_count = 0
@@ -748,6 +763,9 @@ class AutopilotDaemon:
 
         # 6. 自动触发宏观诊断（每10章或幕完成时）
         await self._auto_trigger_macro_diagnosis(novel, len(completed))
+        
+        # 7. 🆕 摘要生成钩子（双轨融合 - 轨道一）
+        await self._maybe_generate_summaries(novel, len(completed))
 
     def _legacy_auditing_tasks_and_voice(
         self,
@@ -999,4 +1017,87 @@ class AutopilotDaemon:
             NovelId(novel.novel_id.value), chapter_num
         )
         return chapter.content if chapter else None
+
+    async def _maybe_generate_summaries(self, novel: Novel, completed_count: int) -> None:
+        """摘要生成钩子（双轨融合 - 轨道一）
+        
+        触发时机：
+        1. 检查点摘要：每 20 章
+        2. 幕摘要：幕完成时
+        3. 卷摘要：卷完成时
+        4. 部摘要：部完成时
+        """
+        if not self.volume_summary_service:
+            return
+        
+        try:
+            novel_id = novel.novel_id.value
+            
+            # 1. 检查点摘要（每 20 章）
+            if await self.volume_summary_service.should_generate_checkpoint(novel_id, completed_count):
+                logger.info(f"[{novel_id}] 📝 生成检查点摘要（第 {completed_count} 章）")
+                result = await self.volume_summary_service.generate_checkpoint_summary(novel_id, completed_count)
+                if result.success:
+                    logger.info(f"[{novel_id}] ✅ 检查点摘要生成成功")
+                else:
+                    logger.warning(f"[{novel_id}] 检查点摘要生成失败: {result.error}")
+            
+            # 2. 幕摘要（幕完成时）
+            all_nodes = await self.story_node_repo.get_by_novel(novel_id)
+            act_nodes = sorted(
+                [n for n in all_nodes if n.node_type.value == "act"],
+                key=lambda x: x.number
+            )
+            
+            if act_nodes:
+                # 找到最近完成的幕
+                for act in reversed(act_nodes):
+                    if act.chapter_end and act.chapter_end <= completed_count:
+                        # 检查是否已生成摘要
+                        has_summary = act.metadata.get("summary") if act.metadata else None
+                        if not has_summary:
+                            logger.info(f"[{novel_id}] 📝 生成幕摘要: {act.title}")
+                            result = await self.volume_summary_service.generate_act_summary(novel_id, act.id)
+                            if result.success:
+                                logger.info(f"[{novel_id}] ✅ 幕摘要生成成功: {act.title}")
+                            break
+            
+            # 3. 卷摘要（检测卷是否完成）
+            volume_nodes = sorted(
+                [n for n in all_nodes if n.node_type.value == "volume"],
+                key=lambda x: x.number
+            )
+            
+            for vol in volume_nodes:
+                if vol.chapter_end and vol.chapter_end <= completed_count:
+                    has_summary = vol.metadata.get("summary") if vol.metadata else None
+                    if not has_summary:
+                        logger.info(f"[{novel_id}] 📝 生成卷摘要: {vol.title}")
+                        result = await self.volume_summary_service.generate_volume_summary(novel_id, vol.number)
+                        if result.success:
+                            logger.info(f"[{novel_id}] ✅ 卷摘要生成成功: {vol.title}")
+                        break
+            
+            # 4. 部摘要（检测部是否完成）
+            part_nodes = sorted(
+                [n for n in all_nodes if n.node_type.value == "part"],
+                key=lambda x: x.number
+            )
+            
+            for part in part_nodes:
+                # 部完成的判断：最后一个卷已完成
+                child_volumes = [v for v in volume_nodes if v.parent_id == part.id]
+                if child_volumes:
+                    last_vol = max(child_volumes, key=lambda x: x.number)
+                    if last_vol.chapter_end and last_vol.chapter_end <= completed_count:
+                        has_summary = part.metadata.get("summary") if part.metadata else None
+                        if not has_summary:
+                            logger.info(f"[{novel_id}] 📝 生成部摘要: {part.title}")
+                            result = await self.volume_summary_service.generate_part_summary(novel_id, part.number)
+                            if result.success:
+                                logger.info(f"[{novel_id}] ✅ 部摘要生成成功: {part.title}")
+                            break
+        
+        except Exception as e:
+            logger.warning(f"[{novel.novel_id}] 摘要生成失败: {e}")
 
