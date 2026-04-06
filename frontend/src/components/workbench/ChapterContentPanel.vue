@@ -222,7 +222,15 @@ interface MicroBeat {
   focus: string
 }
 
-const microBeats = ref<MicroBeat[]>([])
+// TODO: 微观节拍需要从后端 API 获取（章节生成时由守护进程创建）
+// 当前暂时从 knowledgeChapter 中读取
+const microBeats = computed<MicroBeat[]>(() => {
+  const k = knowledgeChapter.value
+  if (k?.micro_beats && Array.isArray(k.micro_beats)) {
+    return k.micro_beats as MicroBeat[]
+  }
+  return []
+})
 
 const getBeatTypeColor = (focus: string): 'success' | 'warning' | 'error' | 'info' | 'default' => {
   const colorMap: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
