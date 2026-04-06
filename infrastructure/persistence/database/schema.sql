@@ -118,6 +118,20 @@ CREATE INDEX IF NOT EXISTS idx_novels_autopilot_status ON novels(autopilot_statu
 CREATE INDEX IF NOT EXISTS idx_novels_current_stage ON novels(current_stage);
 CREATE INDEX IF NOT EXISTS idx_triples_subject ON triples(novel_id, subject);
 CREATE INDEX IF NOT EXISTS idx_triples_predicate ON triples(predicate);
+
+-- ========== Chapter Reviews（章节审阅记录：与工作台「审定」同源） ==========
+CREATE TABLE IF NOT EXISTS chapter_reviews (
+    novel_id TEXT NOT NULL,
+    chapter_number INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    memo TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (novel_id, chapter_number),
+    FOREIGN KEY (novel_id, chapter_number) REFERENCES chapters(novel_id, number) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_chapter_reviews_novel ON chapter_reviews(novel_id);
 CREATE INDEX IF NOT EXISTS idx_triples_entity_type ON triples(novel_id, entity_type);
 CREATE INDEX IF NOT EXISTS idx_triples_chapter ON triples(novel_id, chapter_number);
 CREATE INDEX IF NOT EXISTS idx_triples_source ON triples(novel_id, source_type);
