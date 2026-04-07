@@ -139,6 +139,7 @@ class ContextBudgetAllocator:
         chapter_repository: Optional[ChapterRepository] = None,
         bible_repository: Optional[BibleRepository] = None,
         story_node_repository: Optional[StoryNodeRepository] = None,
+        chapter_element_repository = None,
         vector_store: Optional[VectorStore] = None,
         embedding_service: Optional[EmbeddingService] = None,
     ):
