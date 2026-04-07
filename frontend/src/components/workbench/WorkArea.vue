@@ -62,7 +62,7 @@
                     v-model:value="chapterContent"
                     type="textarea"
                     placeholder="章节内容..."
-                    :autosize="{ minRows: 22 }"
+                    :autosize="false"
                     :readonly="isAssistedReadOnly"
                     @update:value="handleContentChange"
                   />
@@ -1243,18 +1243,27 @@ defineExpose({ ensureAssistedMode })
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .editor-body :deep(.n-input) {
   flex: 1;
-  min-height: 100%;
+  min-height: 0;
+  height: 100%;
+}
+
+.editor-body :deep(.n-input .n-input-wrapper),
+.editor-body :deep(.n-input .n-input__border),
+.editor-body :deep(.n-input .n-input__state-border) {
+  height: 100%;
 }
 
 .editor-body :deep(.n-input__textarea-el) {
+  height: 100% !important;
   font-family: var(--font-mono);
   font-size: 14px;
   line-height: 1.8;
+  overflow-y: auto !important;
   resize: none;
 }
 
