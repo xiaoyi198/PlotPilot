@@ -998,37 +998,34 @@ async def sync_chapter_narrative_after_save(
     # 生成微观节拍
     micro_beats = []
     try:
-        from application.engine.services.context_builder import ContextBuilder
-        # 这里需要获取 ContextBuilder 实例来生成节拍
-        # 我们可以复用章节大纲来生成节拍
+        # 如果生成时已经创建，直接使用
         if bundle.get("micro_beats"):
-            # 如果生成时已经创建，直接使用
             micro_beats = bundle.get("micro_beats")
         else:
             # 否则从大纲动态生成
+            # 获取章节大纲（从结构树或 beat_sections 推断）
+            outline_text = ""
             try:
-                # 临时创建 ContextBuilder（最好通过依赖注入）
-                from application.world.services.bible_service import BibleService
-                from domain.bible.services.relationship_engine import RelationshipEngine
-                from domain.novel.services.storyline_manager import StorylineManager
-                from domain.novel.repositories.novel_repository import NovelRepository
-                from domain.novel.repositories.chapter_repository import ChapterRepository
-                from domain.novel.repositories.plot_arc_repository import PlotArcRepository
-                from domain.ai.services.vector_store import VectorStore
+                # 尝试从结构树获取大纲
+                from application.paths import get_db_path
+                from infrastructure.persistence.database.story_node_repository import StoryNodeRepository
+                from domain.structure.story_node import NodeType
                 
-                # 尝试从应用上下文中获取
-                context_builder = None
+                repo = StoryNodeRepository(str(get_db_path()))
+                nodes = repo.get_by_novel_sync(novel_id)
+                for n in nodes:
+                    if n.node_type == NodeType.CHAPTER and int(n.number) == int(chapter_number):
+                        outline_text = (n.outline or "").strip()
+                        break
+            except Exception as e:
+                logger.debug("从结构树获取大纲失败: %s", e)
+            
+            # 如果有大纲，使用静态方法生成节拍
+            if outline_text:
                 try:
-                    from application.paths import get_current_app
-                    app = get_current_app()
-                    context_builder = getattr(app, 'context_builder', None)
-                except:
-                    pass
-                
-                if context_builder and hasattr(context_builder, 'magnify_outline_to_beats'):
-                    beats = context_builder.magnify_outline_to_beats(
-                        str(chapter_plan.value.get('outline', '') if chapter_plan.value else '')
-                    )
+                    from application.engine.services.context_builder import ContextBuilder
+                    # 使用静态启发式生成节拍（无需实例化）
+                    beats = ContextBuilder(None, None, None, None, None, None).magnify_outline_to_beats(outline_text)
                     micro_beats = [
                         {
                             "description": beat.description,
@@ -1036,8 +1033,9 @@ async def sync_chapter_narrative_after_save(
                             "focus": beat.focus
                         } for beat in beats
                     ]
-            except Exception as e:
-                logger.debug("生成微观节拍失败: %s", e)
+                    logger.debug("从大纲生成微观节拍: %d 个", len(micro_beats))
+                except Exception as e:
+                    logger.debug("生成微观节拍失败: %s", e)
     except Exception as e:
         logger.debug("微观节拍处理失败: %s", e)
     
