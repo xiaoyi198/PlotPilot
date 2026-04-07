@@ -171,7 +171,7 @@ const lastContentLength = ref(0)
 const streamingText = ref('')
 const scrollContainer2 = ref<HTMLElement | null>(null)
 
-const isWritingContent = computed(() => props.writingContent && props.writingContent.length > 0)
+const isWritingContent = computed(() => props.writingContent && props.writingContent.length > 0 && (props.writingChapterNumber || 0) > 0)
 const writingWordCount = computed(() => props.writingContent?.length || 0)
 const writingChapterNumber = computed(() => props.writingChapterNumber || 0)
 const writingBeatIndex = computed(() => props.writingBeatIndex || 0)
@@ -474,10 +474,15 @@ watch(
       }
     }
 
-    // 提取新增的文字（流式滚动显示）
+    // 流式滚动显示：只显示最近的文字（避免内容无限累积导致重复显示）
     if (currentCount > lastContentLength.value) {
-      const newChars = content.slice(lastContentLength.value)
-      streamingText.value += newChars
+      // 只保留最后 500 个字符，避免内容过长
+      const displayLimit = 500
+      if (currentCount > displayLimit) {
+        streamingText.value = content.slice(-displayLimit)
+      } else {
+        streamingText.value = content
+      }
       lastContentLength.value = currentCount
 
       // 自动滚动到底部
@@ -612,9 +617,9 @@ onUnmounted(() => {
 }
 
 .writing-stream-bar .stream-content-preview {
-  max-height: 200px;
+  max-height: 120px;
   overflow-y: auto;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-top: 1px solid rgba(24, 160, 88, 0.1);
   background: rgba(0, 0, 0, 0.02);
 }
