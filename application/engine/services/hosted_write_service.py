@@ -114,7 +114,7 @@ class HostedWriteService:
 
             yield {"type": "outline", "chapter": n, "text": outline}
 
-            async for ev in self._workflow.generate_chapter_stream(novel_id, n, outline):
+            async for ev in self._workflow.generate_chapter_stream(novel_id, n, outline, enable_beats=True):
                 merged: Dict[str, Any] = dict(ev)
                 merged["chapter"] = n
                 yield merged

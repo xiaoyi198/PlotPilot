@@ -300,6 +300,17 @@ class ContextBudgetAllocator:
             priority=80,
         )
         
+        # 4. 宏观诊断断点（人设冲突提醒）
+        diagnosis_breakpoints = self._get_diagnosis_breakpoints(novel_id, chapter_number)
+        slots["diagnosis_breakpoints"] = ContextSlot(
+            name="人设冲突提醒",
+            tier=PriorityTier.T0_CRITICAL,
+            content=diagnosis_breakpoints,
+            tokens=self.estimate_tokens(diagnosis_breakpoints),
+            max_tokens=1500,  # 最大 1500 tokens
+            priority=85,  # 介于角色锚点和伏笔之间
+        )
+        
         # ==================== T1: 可压缩内容 ====================
         
         # 4. 图谱子网（一度关系）
@@ -900,5 +911,90 @@ class ContextBudgetAllocator:
             
         except Exception as e:
             logger.warning(f"向量召回失败: {e}")
+        
+        return ""
+    
+    def _get_diagnosis_breakpoints(
+        self,
+        novel_id: str,
+        chapter_number: int,
+    ) -> str:
+        """获取宏观诊断断点（人设冲突提醒）
+        
+        从最新的宏观诊断结果中提取冲突断点，注入到后续生成的提示词中，
+        提醒 LLM 避免继续犯相同的人设错误。
+        
+        Args:
+            novel_id: 小说 ID
+            chapter_number: 当前章节号
+        
+        Returns:
+            格式化的人设冲突提醒文本
+        """
+        try:
+            from infrastructure.persistence.database.connection import get_database
+            
+            db = get_database()
+            
+            # 获取最新诊断结果
+            sql = """
+                SELECT breakpoints, trait, trigger_reason, created_at
+                FROM macro_diagnosis_results
+                WHERE novel_id = ? AND status = 'completed'
+                ORDER BY created_at DESC
+                LIMIT 1
+            """
+            row = db.fetch_one(sql, (novel_id,))
+            
+            if not row or not row["breakpoints"]:
+                return ""
+            
+            import json
+            breakpoints = json.loads(row["breakpoints"])
+            
+            if not breakpoints:
+                return ""
+            
+            # 过滤：只保留当前章节之前的断点（已存在的冲突）
+            relevant_breakpoints = [
+                bp for bp in breakpoints
+                if bp.get("chapter", 0) <= chapter_number
+            ]
+            
+            if not relevant_breakpoints:
+                return ""
+            
+            # 构建提醒文本
+            lines = [
+                "【⚠️ 人设冲突提醒 - 请在后续章节避免继续犯类似错误】",
+                f"诊断时间：{row['created_at'][:16] if row['created_at'] else ''}",
+                f"扫描人设：{row['trait']}",
+                "",
+                "已检测到以下人设冲突断点，请在写作时注意避免：",
+            ]
+            
+            # 按章节分组
+            by_chapter = {}
+            for bp in relevant_breakpoints[:15]:  # 最多 15 个断点
+                ch = bp.get("chapter", 0)
+                if ch not in by_chapter:
+                    by_chapter[ch] = []
+                by_chapter[ch].append(bp)
+            
+            for ch in sorted(by_chapter.keys()):
+                bps = by_chapter[ch]
+                lines.append(f"\n第 {ch} 章：")
+                for bp in bps:
+                    reason = bp.get("reason", "")
+                    tags = bp.get("tags", [])
+                    tags_str = "、".join(tags)
+                    lines.append(f"  • {reason}（冲突标签：{tags_str}）")
+            
+            lines.append("\n【注意】请确保后续章节的角色行为符合人设，避免上述冲突标签。")
+            
+            return "\n".join(lines)
+            
+        except Exception as e:
+            logger.warning(f"获取宏观诊断断点失败: {e}")
         
         return ""
